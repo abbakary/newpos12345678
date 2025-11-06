@@ -1140,21 +1140,29 @@ def customer_register(request: HttpRequest):
                                     messages.info(request, 'A customer with the same details exists in another branch. A separate record will be created for your branch.')
                                     break
                     
-                        # If quick save, create the customer immediately
+                        # If quick save, create the customer immediately using centralized service
                         from .utils import get_user_branch
-                        c = Customer.objects.create(
-                            full_name=full_name,
-                            phone=phone,
-                            whatsapp=data.get("whatsapp"),
-                            email=data.get("email"),
-                            address=data.get("address"),
-                            notes=data.get("notes"),
-                            customer_type=data.get("customer_type"),
-                            organization_name=data.get("organization_name"),
-                            tax_number=data.get("tax_number"),
-                            personal_subtype=data.get("personal_subtype"),
-                            branch=get_user_branch(request.user)
-                        )
+                        from .services import CustomerService
+                        try:
+                            c, _ = CustomerService.create_or_get_customer(
+                                branch=get_user_branch(request.user),
+                                full_name=full_name,
+                                phone=phone,
+                                whatsapp=data.get("whatsapp"),
+                                email=data.get("email"),
+                                address=data.get("address"),
+                                notes=data.get("notes"),
+                                customer_type=data.get("customer_type"),
+                                organization_name=data.get("organization_name"),
+                                tax_number=data.get("tax_number"),
+                                personal_subtype=data.get("personal_subtype"),
+                            )
+                        except Exception as e:
+                            logger.warning(f"Error creating customer: {e}")
+                            if is_ajax:
+                                return json_response(False, form=form, message="Error creating customer", message_type="error")
+                            messages.error(request, "Error creating customer")
+                            return redirect(f"{reverse('tracker:customer_register')}?step=1")
 
                         # Clear session data after saving
                         if 'reg_step1' in request.session:
