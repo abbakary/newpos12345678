@@ -230,20 +230,20 @@
           <!-- Tire Service Add-ons -->
           <div class="col-12">
             <div class="card border-warning">
-              <div class="card-header bg-warning text-dark"><h6 class="mb-0">Tire Service Add-ons</h6></div>
+              <div class="card-header bg-warning text-dark"><h6 class="mb-0"><i class="fa fa-list-check me-2"></i>Tire Service Add-ons</h6></div>
               <div class="card-body">
-                <div class="row g-3">
+                <div class="row g-2">
                   {% if sales_addons %}
                     {% for ad in sales_addons %}
-                    <div class="col-md-3">
-                      <div class="service-card card p-2 cursor-pointer" data-minutes="{{ ad.estimated_minutes }}" onclick="toggleServiceCheckbox(event, 'oc_ts_{{ forloop.counter }}', true)">
-                        <div class="card-body p-2 d-flex align-items-center">
-                          <input class="form-check-input tire-service-checkbox me-2" type="checkbox" id="oc_ts_{{ forloop.counter }}" name="tire_services" value="{{ ad.name }}" data-minutes="{{ ad.estimated_minutes }}">
-                          <div>
-                            <label class="form-check-label mb-0" for="oc_ts_{{ forloop.counter }}">{{ ad.name }}</label>
-                            <div class="small text-muted">{{ ad.estimated_minutes }} mins</div>
+                    <div class="col-md-6 col-lg-4">
+                      <div class="addon-checkbox-card">
+                        <input class="form-check-input tire-service-checkbox" type="checkbox" id="oc_ts_{{ forloop.counter }}" name="tire_services" value="{{ ad.name }}" data-minutes="{{ ad.estimated_minutes }}">
+                        <label class="addon-checkbox-label" for="oc_ts_{{ forloop.counter }}">
+                          <div class="addon-checkbox-content">
+                            <div class="addon-checkbox-name">{{ ad.name }}</div>
+                            <div class="addon-checkbox-duration"><i class="fa fa-clock-o me-1"></i>{{ ad.estimated_minutes }} mins</div>
                           </div>
-                        </div>
+                        </label>
                       </div>
                     </div>
                     {% endfor %}
