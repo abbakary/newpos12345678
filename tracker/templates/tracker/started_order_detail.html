@@ -419,65 +419,187 @@
 
     <!-- Documents Tab -->
     <div class="tab-pane fade" id="documents">
+      <!-- Document Upload Section -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+          <h6 class="mb-0"><i class="fa fa-cloud-upload me-2"></i>Upload Invoice/Document</h6>
+        </div>
+        <div class="card-body">
+          <form id="documentUploadForm" enctype="multipart/form-data">
+            <div class="mb-3">
+              <label class="form-label">Select Document (PDF preferred)</label>
+              <div class="input-group">
+                <input type="file" id="documentUploadInput" name="document" accept=".pdf,.txt,.png,.jpg,.jpeg" class="form-control" required>
+                <button class="btn btn-primary" type="button" id="uploadDocumentBtn" onclick="uploadDocument()">
+                  <i class="fa fa-upload me-1"></i>Upload & Extract
+                </button>
+              </div>
+              <small class="text-muted d-block mt-2">Supported formats: PDF (recommended), Text files, Images. System will extract customer, vehicle, and invoice details automatically.</small>
+            </div>
+            <div id="uploadProgressContainer" style="display:none;">
+              <div class="progress mb-2">
+                <div id="uploadProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%"></div>
+              </div>
+              <small id="uploadStatusText" class="text-muted">Uploading and processing document...</small>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Uploaded Documents -->
       {% if documents %}
+      <div class="row g-3">
         {% for doc in documents %}
-        <div class="card shadow-sm mb-3">
-          <div class="card-header bg-light d-flex justify-content-between align-items-center">
-            <div>
-              <h6 class="mb-1"><i class="fa fa-file me-2"></i>{{ doc.file_name }}</h6>
-              <small class="text-muted">
-                {{ doc.document_type|upper }} • Uploaded {{ doc.uploaded_at|date:"M d, H:i" }}
-              </small>
+        <div class="col-lg-6">
+          <div class="card shadow-sm h-100">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+              <div>
+                <h6 class="mb-1"><i class="fa fa-file-pdf me-2" style="color: #dc3545;"></i>{{ doc.file_name }}</h6>
+                <small class="text-muted">
+                  {{ doc.document_type|upper }} • {{ doc.uploaded_at|date:"M d, Y H:i" }}
+                </small>
+              </div>
+              <span class="badge bg-{% if doc.extraction_status == 'completed' %}success{% elif doc.extraction_status == 'processing' %}warning{% else %}danger{% endif %}">
+                {{ doc.extraction_status|title }}
+              </span>
             </div>
-            <span class="badge bg-{% if doc.extraction_status == 'completed' %}success{% elif doc.extraction_status == 'processing' %}warning{% else %}danger{% endif %}">
-              {{ doc.extraction_status|title }}
-            </span>
-          </div>
-          {% if doc.extraction %}
-          <div class="card-body">
-            <div class="row g-3">
-              {% if doc.extraction.extracted_customer_name %}
-              <div class="col-md-6">
-                <small class="text-muted d-block">Customer Name</small>
-                <strong>{{ doc.extraction.extracted_customer_name }}</strong>
+
+            {% if doc.extraction %}
+            <div class="card-body">
+              <!-- Extracted Data Summary -->
+              <div class="extraction-summary mb-3">
+                <div class="row g-2">
+                  {% if doc.extraction.extracted_customer_name %}
+                  <div class="col-12">
+                    <small class="text-muted d-block">Customer Name</small>
+                    <strong>{{ doc.extraction.extracted_customer_name }}</strong>
+                  </div>
+                  {% endif %}
+                  {% if doc.extraction.extracted_customer_phone %}
+                  <div class="col-12">
+                    <small class="text-muted d-block">Customer Phone</small>
+                    <strong>{{ doc.extraction.extracted_customer_phone }}</strong>
+                  </div>
+                  {% endif %}
+                  {% if doc.extraction.extracted_vehicle_plate %}
+                  <div class="col-12">
+                    <small class="text-muted d-block">Vehicle Plate</small>
+                    <strong>{{ doc.extraction.extracted_vehicle_plate }}</strong>
+                  </div>
+                  {% endif %}
+                  {% if doc.extraction.extracted_order_description %}
+                  <div class="col-12">
+                    <small class="text-muted d-block">Service Description</small>
+                    <strong>{{ doc.extraction.extracted_order_description }}</strong>
+                  </div>
+                  {% endif %}
+                  {% if doc.extraction.code_no %}
+                  <div class="col-12">
+                    <small class="text-muted d-block">Code No</small>
+                    <strong>{{ doc.extraction.code_no }}</strong>
+                  </div>
+                  {% endif %}
+                  {% if doc.extraction.reference %}
+                  <div class="col-12">
+                    <small class="text-muted d-block">Reference</small>
+                    <strong>{{ doc.extraction.reference }}</strong>
+                  </div>
+                  {% endif %}
+                  {% if doc.extraction.net_value %}
+                  <div class="col-md-6">
+                    <small class="text-muted d-block">Net Value</small>
+                    <strong>{{ doc.extraction.net_value }}</strong>
+                  </div>
+                  {% endif %}
+                  {% if doc.extraction.vat_amount %}
+                  <div class="col-md-6">
+                    <small class="text-muted d-block">VAT Amount</small>
+                    <strong>{{ doc.extraction.vat_amount }}</strong>
+                  </div>
+                  {% endif %}
+                  {% if doc.extraction.gross_value %}
+                  <div class="col-12">
+                    <small class="text-muted d-block">Gross Value</small>
+                    <strong style="font-size: 1.1em; color: #28a745;">{{ doc.extraction.gross_value }}</strong>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Extracted Line Items -->
+              {% if doc.extraction.items.all %}
+              <div class="extracted-items mb-3">
+                <small class="text-muted d-block mb-2"><strong>Extracted Items:</strong></small>
+                <div class="table-responsive">
+                  <table class="table table-sm table-bordered">
+                    <thead class="table-light">
+                      <tr>
+                        <th>Code</th>
+                        <th>Description</th>
+                        <th>Qty</th>
+                        <th>Unit</th>
+                        <th>Rate</th>
+                        <th>Value</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for item in doc.extraction.items.all %}
+                      <tr>
+                        <td>{{ item.code|default:"-" }}</td>
+                        <td>{{ item.description|default:"-" }}</td>
+                        <td>{{ item.qty|default:"-" }}</td>
+                        <td>{{ item.unit|default:"-" }}</td>
+                        <td>{{ item.rate|default:"-" }}</td>
+                        <td>{{ item.value|default:"-" }}</td>
+                      </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
               </div>
               {% endif %}
-              {% if doc.extraction.extracted_customer_phone %}
-              <div class="col-md-6">
-                <small class="text-muted d-block">Customer Phone</small>
-                <strong>{{ doc.extraction.extracted_customer_phone }}</strong>
+
+              <!-- Action Buttons -->
+              <div class="button-group d-flex gap-2">
+                <button type="button" class="btn btn-sm btn-primary flex-fill" onclick="applyExtractionToOrder({{ doc.extraction.id }})">
+                  <i class="fa fa-check me-1"></i>Apply to Order
+                </button>
+                <button type="button" class="btn btn-sm btn-success flex-fill" onclick="showCreateInvoiceModal({{ doc.extraction.id }})">
+                  <i class="fa fa-file-invoice me-1"></i>Create Invoice
+                </button>
               </div>
-              {% endif %}
-              {% if doc.extraction.extracted_vehicle_plate %}
-              <div class="col-md-6">
-                <small class="text-muted d-block">Vehicle Plate</small>
-                <strong>{{ doc.extraction.extracted_vehicle_plate }}</strong>
+            </div>
+            {% else %}
+            <div class="card-body">
+              {% if doc.extraction_status == 'processing' %}
+              <div class="text-center">
+                <div class="spinner-border spinner-border-sm text-warning" role="status">
+                  <span class="visually-hidden">Processing...</span>
+                </div>
+                <p class="text-muted mt-2">Extracting document data...</p>
               </div>
-              {% endif %}
-              {% if doc.extraction.extracted_order_description %}
-              <div class="col-md-6">
-                <small class="text-muted d-block">Service Description</small>
-                <strong>{{ doc.extraction.extracted_order_description }}</strong>
+              <script>
+                setTimeout(function() { location.reload(); }, 2000);
+              </script>
+              {% elif doc.extraction_status == 'failed' %}
+              <div class="alert alert-danger" role="alert">
+                <i class="fa fa-exclamation-triangle me-2"></i>
+                <strong>Extraction Failed</strong>
+                <p class="mb-0 small">{{ doc.extraction_error }}</p>
               </div>
-              {% endif %}
-              {% if doc.extraction.extracted_amount %}
-              <div class="col-md-6">
-                <small class="text-muted d-block">Amount</small>
-                <strong>{{ doc.extraction.extracted_amount }}</strong>
-              </div>
+              {% else %}
+              <p class="text-muted">Document uploaded but extraction not started yet.</p>
               {% endif %}
             </div>
-            <button type="button" class="btn btn-sm btn-primary mt-3" onclick="applyExtractionToOrder({{ doc.extraction.id }})">
-              <i class="fa fa-check me-1"></i> Apply to Order
-            </button>
+            {% endif %}
           </div>
-          {% endif %}
         </div>
         {% endfor %}
+      </div>
       {% else %}
       <div class="alert alert-info text-center" role="alert">
         <i class="fa fa-info-circle me-2"></i>
-        <strong>No documents uploaded yet.</strong>
+        <strong>No documents uploaded yet.</strong> Upload an invoice or quotation to get started.
       </div>
       {% endif %}
     </div>
