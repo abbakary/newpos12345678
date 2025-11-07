@@ -498,9 +498,16 @@ class DocumentExtraction(models.Model):
     extracted_amount = models.CharField(max_length=32, blank=True, null=True)
     extracted_currency = models.CharField(max_length=16, blank=True, null=True)
 
-    # Invoice metadata
+    # Invoice metadata - Proforma/Invoice specific fields
     code_no = models.CharField(max_length=64, blank=True, null=True, help_text='Customer / code number from invoice (Code No)')
     reference = models.CharField(max_length=64, blank=True, null=True, help_text='Reference field from invoice (often plate)')
+    pi_no = models.CharField(max_length=64, blank=True, null=True, help_text='Proforma Invoice Number (PI No)')
+    invoice_date = models.DateField(blank=True, null=True, help_text='Invoice/PI date extracted from document')
+    del_date = models.DateField(blank=True, null=True, help_text='Delivery date from invoice')
+    attended_by = models.CharField(max_length=255, blank=True, null=True, help_text='Attended by field from invoice')
+    extracted_customer_tel = models.CharField(max_length=20, blank=True, null=True, help_text='Customer Tel from invoice (Tel field)')
+
+    # Financial summary fields
     net_value = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
     vat_amount = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
     gross_value = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
