@@ -341,6 +341,69 @@
               }
             }
           </script>
+
+          <script>
+            // Started order upload button handler
+            (function(){
+              const uploadBtn = document.getElementById('uploadInvoiceBtn');
+              const modalEl = document.getElementById('uploadInvoiceModal');
+              const modal = modalEl ? new bootstrap.Modal(modalEl) : null;
+              const fileInput = document.getElementById('startedOrderInvoiceFile');
+              const startedUploadBtn = document.getElementById('startedUploadBtn');
+              const startedUploadError = document.getElementById('startedUploadError');
+
+              function getCSRF(){
+                const name = 'csrftoken=';
+                const parts = document.cookie.split(';');
+                for (let i=0;i<parts.length;i++){ const c = parts[i].trim(); if (c.indexOf(name)===0) return c.substring(name.length); }
+                return document.querySelector('[name=csrfmiddlewaretoken]') ? document.querySelector('[name=csrfmiddlewaretoken]').value : '';
+              }
+
+              if (uploadBtn){
+                uploadBtn.addEventListener('click', function(){
+                  if (modal) modal.show();
+                });
+              }
+
+              if (startedUploadBtn){
+                startedUploadBtn.addEventListener('click', function(){
+                  startedUploadError.style.display='none';
+                  if (!fileInput || !fileInput.files || !fileInput.files[0]){ startedUploadError.style.display='block'; startedUploadError.textContent='Please select a file.'; return; }
+                  const fd = new FormData();
+                  fd.append('file', fileInput.files[0]);
+                  fd.append('selected_order_id', '{{ order.id }}');
+                  // include plate optionally
+                  {% if vehicle and vehicle.plate_number %}
+                  fd.append('plate', '{{ vehicle.plate_number }}');
+                  {% endif %}
+
+                  startedUploadBtn.disabled = true;
+                  fetch('{% url "tracker:api_upload_extract_invoice" %}', {
+                    method: 'POST',
+                    body: fd,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCSRF() }
+                  }).then(r=>r.json()).then(data=>{
+                    startedUploadBtn.disabled = false;
+                    if (data && data.success){
+                      window.location.href = data.redirect_url || ('/invoices/' + data.invoice_id + '/');
+                      return;
+                    }
+                    if (data && data.data){
+                      // Show extraction in a simple alert / fallback to details page
+                      alert('Extraction succeeded but requires review. Opening invoice create page.');
+                      if (modal) modal.hide();
+                      window.location.href = '{% url "tracker:invoice_create" %}?plate={{ vehicle.plate_number|default:"" }}';
+                    } else {
+                      startedUploadError.style.display='block'; startedUploadError.textContent = data.message || 'Extraction failed';
+                    }
+                  }).catch(err=>{
+                    startedUploadBtn.disabled = false; startedUploadError.style.display='block'; startedUploadError.textContent = 'Upload error: ' + (err && err.message?err.message:err);
+                  });
+                });
+              }
+
+            })();
+          </script>
         </div>
       </div>
     </div>
