@@ -30,6 +30,9 @@
               <button class="btn btn-primary" type="button" id="searchCustomerBtn">
                 <i class="fa fa-search"></i> Search
               </button>
+              <button class="btn btn-outline-primary ms-2" type="button" id="openAddCustomerBtnInline" title="Add new customer">
+                <i class="fa fa-user-plus"></i>
+              </button>
             </div>
             <div id="searchResults" class="list-group" style="display: none;">
               <!-- Search results will be populated here -->
@@ -509,7 +512,99 @@
         loadCustomerVehicles(presetCustomer.value);
       }
       }
-    })();
+
+      // Inline quick-create customer handler
+      (function(){
+        const openBtn = document.getElementById('openAddCustomerBtnInline');
+        if (!openBtn) return;
+        openBtn.addEventListener('click', function(){
+          const modalEl = document.getElementById('addCustomerModalInline');
+          const modal = new bootstrap.Modal(modalEl);
+          modal.show();
+        });
+
+        const modalForm = document.getElementById('addCustomerFormInline');
+        if (!modalForm) return;
+        modalForm.addEventListener('submit', function(e){
+          e.preventDefault();
+          const form = e.currentTarget;
+          const data = new FormData(form);
+          const csrftokenEl = document.querySelector('#csrfTokenHolderInline [name=csrfmiddlewaretoken]');
+          if (csrftokenEl) data.append('csrfmiddlewaretoken', csrftokenEl.value);
+
+          fetch('/customers/quick-create/', {
+            method: 'POST',
+            body: data,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+          })
+          .then(r=>r.json())
+          .then(j=>{
+            if (j.success) {
+              // Preselect created customer and reload vehicles
+              let customerIdField = document.querySelector('input[name="customer_id"]');
+              if (!customerIdField) {
+                customerIdField = document.createElement('input');
+                customerIdField.type = 'hidden';
+                customerIdField.name = 'customer_id';
+                document.querySelector('form[method="post"]').prepend(customerIdField);
+              }
+              customerIdField.value = j.customer.id;
+              // Close modal
+              const modal = bootstrap.Modal.getInstance(document.getElementById('addCustomerModalInline'));
+              modal.hide();
+              // Load vehicles for new customer
+              if (window.loadCustomerVehicles) window.loadCustomerVehicles(j.customer.id);
+              // Show selected customer card
+              document.getElementById('customerName').textContent = j.customer.name;
+              document.getElementById('customerPhone').textContent = j.customer.phone || 'N/A';
+              document.getElementById('customerEmail').textContent = j.customer.email || 'N/A';
+              document.getElementById('selectedCustomer').style.display = 'block';
+            } else if (j.customer_id) {
+              if (confirm(j.message + '\n\nOpen existing customer profile?')) {
+                window.location.href = `/customers/${j.customer_id}/order/new/`;
+              }
+            } else {
+              alert(j.message || 'Error creating customer');
+            }
+          })
+          .catch(err=>{ console.error(err); alert('Error creating customer: '+err.message); });
+        });
+      })();
+
   </script>
+
+  <!-- Inline Add Customer Modal -->
+  <div class="modal fade" id="addCustomerModalInline" tabindex="-1" aria-labelledby="addCustomerModalInlineLabel" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="addCustomerModalInlineLabel">Add Customer</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div id="csrfTokenHolderInline" class="d-none">{% csrf_token %}</div>
+          <form id="addCustomerFormInline">
+            <div class="mb-2">
+              <label class="form-label">Full name</label>
+              <input type="text" name="full_name" class="form-control" required placeholder="e.g., John Doe">
+            </div>
+            <div class="mb-2">
+              <label class="form-label">Phone</label>
+              <input type="text" name="phone" class="form-control" required placeholder="e.g., 2557XXXXXXX">
+            </div>
+            <div class="mb-2">
+              <label class="form-label">Email (optional)</label>
+              <input type="email" name="email" class="form-control" placeholder="email@example.com">
+            </div>
+            <div class="text-end">
+              <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+              <button type="submit" class="btn btn-primary">Create</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
   {% endblock %}
 {% endblock %}
