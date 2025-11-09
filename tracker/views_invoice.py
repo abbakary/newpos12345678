@@ -279,8 +279,11 @@ def api_upload_extract_invoice(request):
             inv.invoice_date = timezone.localdate()
 
         # Set invoice details
-        inv.reference = (header.get('invoice_no') or header.get('code_no') or '').strip() or f"UPLOAD-{timezone.now().strftime('%Y%m%d%H%M%S')}"
-        inv.notes = (header.get('address') or '').strip() or ''
+        inv.reference = (header.get('reference') or header.get('invoice_no') or header.get('code_no') or '').strip() or f"UPLOAD-{timezone.now().strftime('%Y%m%d%H%M%S')}"
+        inv.attended_by = (header.get('attended_by') or '').strip() or None
+        inv.kind_attention = (header.get('kind_attention') or '').strip() or None
+        inv.remarks = (header.get('remarks') or '').strip() or None
+        inv.notes = (header.get('notes') or '').strip() or ''
 
         # Set monetary fields with proper defaults (use correct field names from extraction)
         inv.subtotal = header.get('subtotal') or Decimal('0')
