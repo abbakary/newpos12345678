@@ -342,11 +342,13 @@ def extract_from_bytes(file_bytes, filename: str = '') -> dict:
             # Prepare header with all extracted fields
             header = {
                 'invoice_no': parsed.get('invoice_no'),
+                'code_no': parsed.get('code_no'),
                 'date': parsed.get('date'),
                 'customer_name': parsed.get('customer_name'),
                 'phone': parsed.get('phone'),
                 'email': parsed.get('email'),
                 'address': parsed.get('address'),
+                'reference': parsed.get('reference'),
                 'subtotal': parsed.get('subtotal'),
                 'tax': parsed.get('tax'),
                 'total': parsed.get('total'),
