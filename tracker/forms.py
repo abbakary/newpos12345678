@@ -1227,30 +1227,163 @@ class InvoiceForm(forms.ModelForm):
         label="Selected Started Order"
     )
 
-    existing_customer = forms.ModelChoiceField(queryset=None, required=False, widget=forms.Select(attrs={'class': 'form-select'}))
-    customer_full_name = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Customer full name'}))
-    customer_phone = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Phone number'}))
-    customer_whatsapp = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'WhatsApp number (optional)'}))
-    customer_email = forms.EmailField(required=False, widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Email (optional)'}))
-    customer_address = forms.CharField(required=False, widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Address (optional)'}))
-    customer_organization_name = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Organization (optional)'}))
-    customer_tax_number = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Tax/ID number (optional)'}))
-    customer_type = forms.ChoiceField(required=False, choices=CUSTOMER_TYPE_CHOICES, widget=forms.Select(attrs={'class': 'form-select'}))
-    customer_personal_subtype = forms.ChoiceField(required=False, choices=PERSONAL_SUBTYPE_CHOICES, widget=forms.Select(attrs={'class': 'form-select'}))
+    existing_customer = forms.ModelChoiceField(
+        queryset=None,
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label="Select Existing Customer"
+    )
+
+    # Customer information fields - matching template field names
+    customer_name = forms.CharField(
+        required=False,
+        max_length=255,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Customer full name or company name',
+            'id': 'customer_name_field'
+        })
+    )
+    customer_phone = forms.CharField(
+        required=False,
+        max_length=20,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Phone number',
+            'id': 'customer_phone_field'
+        })
+    )
+    customer_email = forms.EmailField(
+        required=False,
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Email (optional)',
+            'id': 'customer_email_field'
+        })
+    )
+    customer_address = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 2,
+            'placeholder': 'Address (optional)',
+            'id': 'customer_address_field'
+        })
+    )
+
+    # Customer type information
+    customer_type = forms.ChoiceField(
+        required=False,
+        choices=CUSTOMER_TYPE_CHOICES,
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'id': 'customer_type_field'
+        })
+    )
+
+    # Hidden/optional fields for organizational customers
+    customer_organization_name = forms.CharField(
+        required=False,
+        max_length=255,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Organization/Company name (required for org customers)',
+            'id': 'customer_organization_field'
+        })
+    )
+    customer_tax_number = forms.CharField(
+        required=False,
+        max_length=64,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Tax number/TIN (required for org customers)',
+            'id': 'customer_tax_field'
+        })
+    )
+    customer_personal_subtype = forms.ChoiceField(
+        required=False,
+        choices=PERSONAL_SUBTYPE_CHOICES,
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'id': 'customer_personal_subtype_field'
+        })
+    )
+
+    # Additional invoice fields from extracted data
+    payment_method = forms.CharField(
+        required=False,
+        max_length=32,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Payment method (Cash, Cheque, Bank Transfer, etc.)',
+            'id': 'payment_method_field'
+        })
+    )
+    delivery_terms = forms.CharField(
+        required=False,
+        max_length=128,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Delivery terms (ex-stock, FOB, etc.)',
+            'id': 'delivery_terms_field'
+        })
+    )
 
     class Meta:
         model = Invoice
         fields = ['invoice_date', 'reference', 'due_date', 'tax_rate', 'attended_by', 'kind_attention', 'remarks', 'notes', 'terms']
         widgets = {
-            'invoice_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'placeholder': 'dd/mm/yyyy'}),
-            'reference': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Customer PO or reference'}),
-            'due_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'tax_rate': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0', 'max': '100'}),
-            'attended_by': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Attended By'}),
-            'kind_attention': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Kind Attention'}),
-            'remarks': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Remarks'}),
-            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Additional notes'}),
-            'terms': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Payment terms and conditions'}),
+            'invoice_date': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date',
+                'placeholder': 'dd/mm/yyyy',
+                'id': 'invoice_date_field'
+            }),
+            'reference': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Customer PO or reference',
+                'id': 'invoice_reference_field'
+            }),
+            'due_date': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date',
+                'id': 'invoice_due_date_field'
+            }),
+            'tax_rate': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'min': '0',
+                'max': '100',
+                'id': 'invoice_tax_rate_field'
+            }),
+            'attended_by': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Sales person name',
+                'id': 'invoice_attended_by_field'
+            }),
+            'kind_attention': forms.TextInput(attrs={{
+                'class': 'form-control',
+                'placeholder': 'Customer contact person',
+                'id': 'invoice_kind_attention_field'
+            }),
+            'remarks': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 2,
+                'placeholder': 'Remarks or special instructions',
+                'id': 'invoice_remarks_field'
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Additional notes',
+                'id': 'invoice_notes_field'
+            }),
+            'terms': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Payment terms and conditions',
+                'id': 'invoice_terms_field'
+            }),
         }
 
     def __init__(self, *args, **kwargs):
@@ -1283,14 +1416,14 @@ class InvoiceForm(forms.ModelForm):
         cleaned = super().clean()
         # Ensure that either an existing customer is chosen or at least a name is provided
         existing = cleaned.get('existing_customer')
-        name = (cleaned.get('customer_full_name') or '').strip()
+        name = (cleaned.get('customer_name') or '').strip()
         phone = (cleaned.get('customer_phone') or '').strip()
         ctype = cleaned.get('customer_type')
         psub = cleaned.get('customer_personal_subtype')
 
         # Basic presence validation
         if not existing and not name:
-            self.add_error('customer_full_name', 'Please select an existing customer or provide a customer name.')
+            self.add_error('customer_name', 'Please select an existing customer or provide a customer name.')
 
         # If organizational customer, ensure org name and tax number are provided
         if ctype in {'government', 'ngo', 'company'}:

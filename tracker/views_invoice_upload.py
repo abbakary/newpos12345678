@@ -100,11 +100,18 @@ def api_extract_invoice_preview(request):
             'subtotal': float(header.get('subtotal') or 0),
             'tax': float(header.get('tax') or 0),
             'total': float(header.get('total') or 0),
+            'payment_method': header.get('payment_method'),
+            'delivery_terms': header.get('delivery_terms'),
+            'remarks': header.get('remarks'),
+            'attended_by': header.get('attended_by'),
+            'kind_attention': header.get('kind_attention'),
         },
         'items': [
             {
                 'description': item.get('description', ''),
-                'qty': int(item.get('qty', 1)),
+                'qty': int(item.get('qty', 1)) if isinstance(item.get('qty'), (int, float)) else 1,
+                'unit': item.get('unit'),
+                'code': item.get('code'),
                 'value': float(item.get('value') or 0)
             }
             for item in items
@@ -231,44 +238,67 @@ def api_create_invoice_from_upload(request):
             inv.branch = user_branch
             inv.order = order
             inv.customer = customer_obj
-            
+
             # Parse invoice date
             invoice_date_str = request.POST.get('invoice_date', '')
             try:
                 inv.invoice_date = datetime.strptime(invoice_date_str, '%Y-%m-%d').date() if invoice_date_str else timezone.localdate()
             except Exception:
                 inv.invoice_date = timezone.localdate()
-            
+
             # Set invoice fields
             inv.reference = request.POST.get('invoice_number', '').strip() or f"INV-{timezone.now().strftime('%Y%m%d%H%M%S')}"
-            inv.notes = request.POST.get('notes', '').strip() or ''
-            
+
+            # Collect all notes/remarks
+            notes_parts = []
+            if request.POST.get('notes', '').strip():
+                notes_parts.append(request.POST.get('notes', '').strip())
+            if request.POST.get('remarks', '').strip():
+                notes_parts.append(request.POST.get('remarks', '').strip())
+            if request.POST.get('delivery_terms', '').strip():
+                notes_parts.append(f"Delivery: {request.POST.get('delivery_terms', '').strip()}")
+            inv.notes = ' | '.join(notes_parts) if notes_parts else ''
+
+            # Set additional fields
+            inv.attended_by = request.POST.get('attended_by', '').strip() or None
+            inv.kind_attention = request.POST.get('kind_attention', '').strip() or None
+            inv.remarks = request.POST.get('remarks', '').strip() or None
+
             # Parse amounts
             subtotal = Decimal(str(request.POST.get('subtotal', '0') or '0').replace(',', ''))
             tax_amount = Decimal(str(request.POST.get('tax_amount', '0') or '0').replace(',', ''))
             total_amount = Decimal(str(request.POST.get('total_amount', '0') or '0').replace(',', ''))
-            
+
             inv.subtotal = subtotal
             inv.tax_amount = tax_amount
             inv.total_amount = total_amount or (subtotal + tax_amount)
             inv.created_by = request.user
-            
+
             inv.generate_invoice_number()
             inv.save()
-            
-            # Create line items
+
+            # Create line items with extracted fields
             item_descriptions = request.POST.getlist('item_description[]')
             item_qtys = request.POST.getlist('item_qty[]')
             item_prices = request.POST.getlist('item_price[]')
-            
-            for desc, qty, price in zip(item_descriptions, item_qtys, item_prices):
+            item_codes = request.POST.getlist('item_code[]')
+            item_units = request.POST.getlist('item_unit[]')
+
+            for idx, desc in enumerate(item_descriptions):
                 if desc and desc.strip():
                     try:
+                        qty = int(item_qtys[idx] or 1) if idx < len(item_qtys) else 1
+                        price = Decimal(str(item_prices[idx] or '0').replace(',', '')) if idx < len(item_prices) else Decimal('0')
+                        code = item_codes[idx].strip() if idx < len(item_codes) and item_codes[idx] else None
+                        unit = item_units[idx].strip() if idx < len(item_units) and item_units[idx] else None
+
                         line = InvoiceLineItem(
                             invoice=inv,
+                            code=code,
                             description=desc.strip(),
-                            quantity=int(qty or 1),
-                            unit_price=Decimal(str(price or '0').replace(',', ''))
+                            quantity=qty,
+                            unit=unit,
+                            unit_price=price
                         )
                         line.save()
                     except Exception as e:
@@ -284,7 +314,30 @@ def api_create_invoice_from_upload(request):
                     payment = InvoicePayment()
                     payment.invoice = inv
                     payment.amount = Decimal('0')  # Default to unpaid (amount 0)
-                    payment.payment_method = 'on_delivery'  # Default payment method
+
+                    # Map extracted payment method or use form value or default
+                    extracted_method = request.POST.get('payment_method', '').strip().lower() or 'on_delivery'
+                    payment_method_map = {
+                        'cash': 'cash',
+                        'cheque': 'cheque',
+                        'chq': 'cheque',
+                        'bank': 'bank_transfer',
+                        'transfer': 'bank_transfer',
+                        'card': 'card',
+                        'mpesa': 'mpesa',
+                        'credit': 'on_credit',
+                        'delivery': 'on_delivery',
+                        'cod': 'on_delivery',
+                        'on_delivery': 'on_delivery',
+                    }
+
+                    # Try to match the extracted method to a valid choice
+                    payment.payment_method = 'on_delivery'  # Default
+                    for key, val in payment_method_map.items():
+                        if key in extracted_method:
+                            payment.payment_method = val
+                            break
+
                     payment.payment_date = None
                     payment.reference = None
                     payment.save()

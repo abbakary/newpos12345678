@@ -364,14 +364,20 @@
                             <div class="line-item-row card mb-2">
                               <div class="card-body p-2">
                                 <div class="row g-2">
-                                  <div class="col-md-6">
-                                    <input type="text" class="form-control form-control-sm" name="item_description[]" placeholder="Item description">
+                                  <div class="col-md-4">
+                                    <input type="text" class="form-control form-control-sm" name="item_description[]" placeholder="Item description" required>
+                                  </div>
+                                  <div class="col-md-1">
+                                    <input type="text" class="form-control form-control-sm" name="item_code[]" placeholder="Code" title="Item code">
+                                  </div>
+                                  <div class="col-md-1">
+                                    <input type="number" class="form-control form-control-sm" name="item_qty[]" placeholder="Qty" value="1" min="1" step="0.01">
+                                  </div>
+                                  <div class="col-md-1">
+                                    <input type="text" class="form-control form-control-sm" name="item_unit[]" placeholder="Unit" title="Unit (PCS, KG, etc)">
                                   </div>
                                   <div class="col-md-2">
-                                    <input type="number" class="form-control form-control-sm" name="item_qty[]" placeholder="Qty" value="1" min="1">
-                                  </div>
-                                  <div class="col-md-3">
-                                    <input type="number" class="form-control form-control-sm" name="item_price[]" placeholder="Unit price" step="0.01" min="0">
+                                    <input type="number" class="form-control form-control-sm" name="item_price[]" placeholder="Unit price" step="0.01" min="0" required>
                                   </div>
                                   <div class="col-md-1">
                                     <button type="button" class="btn btn-sm btn-danger remove-item">
@@ -382,6 +388,33 @@
                               </div>
                             </div>
                           </div>
+                        </div>
+
+                        <div class="row mb-3">
+                          <div class="col-md-6">
+                            <label class="form-label">Payment Method</label>
+                            <input type="text" name="payment_method" class="form-control" placeholder="e.g., Cash, Cheque, Bank Transfer">
+                          </div>
+                          <div class="col-md-6">
+                            <label class="form-label">Delivery Terms</label>
+                            <input type="text" name="delivery_terms" class="form-control" placeholder="e.g., ex-stock, FOB">
+                          </div>
+                        </div>
+
+                        <div class="row mb-3">
+                          <div class="col-md-6">
+                            <label class="form-label">Attended By</label>
+                            <input type="text" name="attended_by" class="form-control" placeholder="Sales Person Name">
+                          </div>
+                          <div class="col-md-6">
+                            <label class="form-label">Kind Attention</label>
+                            <input type="text" name="kind_attention" class="form-control" placeholder="Recipient Name">
+                          </div>
+                        </div>
+
+                        <div class="mb-3">
+                          <label class="form-label">Remarks</label>
+                          <textarea name="remarks" class="form-control" rows="2" placeholder="Any remarks or special instructions"></textarea>
                         </div>
 
                         <div class="mb-3">
@@ -819,12 +852,37 @@
                   manualForm.querySelector('input[name="customer_address"]').value = header.address || '';
 
                   // Populate invoice fields
-                  manualForm.querySelector('input[name="invoice_number"]').value = header.invoice_no || '';
+                  manualForm.querySelector('input[name="invoice_number"]').value = header.invoice_no || header.code_no || '';
                   manualForm.querySelector('input[name="invoice_date"]').value = header.date || '';
                   manualForm.querySelector('input[name="subtotal"]').value = header.subtotal || '';
                   manualForm.querySelector('input[name="tax_amount"]').value = header.tax || '';
                   manualForm.querySelector('input[name="total_amount"]').value = header.total || '';
-                  manualForm.querySelector('textarea[name="notes"]').value = header.address || '';
+
+                  // Populate additional fields
+                  const remarksField = manualForm.querySelector('textarea[name="remarks"]');
+                  if (remarksField){
+                    remarksField.value = header.remarks || '';
+                  }
+
+                  const paymentField = manualForm.querySelector('input[name="payment_method"]');
+                  if (paymentField){
+                    paymentField.value = header.payment_method || '';
+                  }
+
+                  const deliveryField = manualForm.querySelector('input[name="delivery_terms"]');
+                  if (deliveryField){
+                    deliveryField.value = header.delivery_terms || '';
+                  }
+
+                  const attendedField = manualForm.querySelector('input[name="attended_by"]');
+                  if (attendedField){
+                    attendedField.value = header.attended_by || '';
+                  }
+
+                  const kindAttnField = manualForm.querySelector('input[name="kind_attention"]');
+                  if (kindAttnField){
+                    kindAttnField.value = header.kind_attention || '';
+                  }
 
                   // Clear existing line items and add extracted ones
                   const existingItems = lineItemsContainer.querySelectorAll('.line-item-row');
@@ -840,15 +898,19 @@
                     data.items.forEach((item, idx) => {
                       if (idx === 0 && firstItem){
                         firstItem.querySelector('input[name="item_description[]"]').value = item.description || '';
+                        firstItem.querySelector('input[name="item_code[]"]').value = item.code || '';
                         firstItem.querySelector('input[name="item_qty[]"]').value = item.qty || 1;
-                        firstItem.querySelector('input[name="item_price[]"]').value = item.value || '';
+                        firstItem.querySelector('input[name="item_unit[]"]').value = item.unit || '';
+                        firstItem.querySelector('input[name="item_price[]"]').value = item.rate || item.value || '';
                       } else {
                         addLineItem();
                         const items = lineItemsContainer.querySelectorAll('.line-item-row');
                         const newItem = items[items.length - 1];
                         newItem.querySelector('input[name="item_description[]"]').value = item.description || '';
+                        newItem.querySelector('input[name="item_code[]"]').value = item.code || '';
                         newItem.querySelector('input[name="item_qty[]"]').value = item.qty || 1;
-                        newItem.querySelector('input[name="item_price[]"]').value = item.value || '';
+                        newItem.querySelector('input[name="item_unit[]"]').value = item.unit || '';
+                        newItem.querySelector('input[name="item_price[]"]').value = item.rate || item.value || '';
                       }
                     });
                   }
@@ -861,14 +923,20 @@
                   <div class="line-item-row card mb-2">
                     <div class="card-body p-2">
                       <div class="row g-2">
-                        <div class="col-md-6">
-                          <input type="text" class="form-control form-control-sm" name="item_description[]" placeholder="Item description">
+                        <div class="col-md-4">
+                          <input type="text" class="form-control form-control-sm" name="item_description[]" placeholder="Item description" required>
+                        </div>
+                        <div class="col-md-1">
+                          <input type="text" class="form-control form-control-sm" name="item_code[]" placeholder="Code" title="Item code">
+                        </div>
+                        <div class="col-md-1">
+                          <input type="number" class="form-control form-control-sm" name="item_qty[]" placeholder="Qty" value="1" min="1" step="0.01">
+                        </div>
+                        <div class="col-md-1">
+                          <input type="text" class="form-control form-control-sm" name="item_unit[]" placeholder="Unit" title="Unit (PCS, KG, etc)">
                         </div>
                         <div class="col-md-2">
-                          <input type="number" class="form-control form-control-sm" name="item_qty[]" placeholder="Qty" value="1" min="1">
-                        </div>
-                        <div class="col-md-3">
-                          <input type="number" class="form-control form-control-sm" name="item_price[]" placeholder="Unit price" step="0.01" min="0">
+                          <input type="number" class="form-control form-control-sm" name="item_price[]" placeholder="Unit price" step="0.01" min="0" required>
                         </div>
                         <div class="col-md-1">
                           <button type="button" class="btn btn-sm btn-danger remove-item">
