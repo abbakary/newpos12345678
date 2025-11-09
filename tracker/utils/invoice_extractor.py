@@ -126,63 +126,75 @@ def extract_header_fields(text):
 
 
 def extract_line_items(text):
-    """Very simple heuristic to extract lines that look like: Sr  ItemCode  Description  Qty  Rate  Value
-    We will scan lines and pick those containing at least two numbers and one large number-looking value.
+    """Extract line items from invoice text.
+    Handles lines that look like: Sr/Item code, Description, Qty, Rate, Value
     """
     items = []
     lines = [l.strip() for l in text.splitlines() if l.strip()]
-    # Try to find the table header index by looking for 'Item' and 'Qty' and 'Value'
+
+    # Try to find the table header by looking for item-related keywords
     header_idx = None
     for idx, line in enumerate(lines[:30]):
-        if re.search(r'\b(Item|Description)\b', line, re.I) and re.search(r'\bQty\b', line, re.I):
+        if re.search(r'\b(Item|Description|Qty|Quantity|Price|Amount|Value|Sr|S\.N)\b', line, re.I) and \
+           re.search(r'\b(Description|Qty|Quantity|Price|Amount|Value)\b', line, re.I):
             header_idx = idx
             break
-    # If header found, parse subsequent lines
+
+    # Parse lines after header
     start = header_idx + 1 if header_idx is not None else 0
     for line in lines[start:]:
-        # stop if footer keywords
-        if re.search(r'\b(Net Value|Total|Gross Value|VAT|Payment)\b', line, re.I):
+        # Stop at footer/summary keywords
+        if re.search(r'\b(Net\s*Value|Total|Gross\s*Value|Grand\s*Total|VAT|Tax|Payment|Amount\s*Due|Summary)\b', line, re.I):
             break
-        # Find numbers with decimal or commas
+
+        # Find all numbers in line
         numbers = re.findall(r'[0-9\,]+\.?\d*', line)
-        if len(numbers) >= 2:
-            # Heuristic mapping
-            # Try to capture item code as first short number
-            item_code = None
-            qty = None
-            rate = None
-            value = None
-            # If line starts with serial and item code
-            parts = re.split(r'\s{2,}|\t', line)
-            # fallback: split by spaces
-            if len(parts) < 3:
-                parts = line.split()
-            # Find last numeric token as value
-            numeric_tokens = re.findall(r'([0-9\,]+\.?\d*)', line)
-            if numeric_tokens:
-                value = numeric_tokens[-1]
-            # qty is likely a small integer near end
-            if len(numeric_tokens) >= 2:
-                qty = numeric_tokens[-2]
-            # try to find item code as first token with 3-6 digits
-            m = re.search(r'\b(\d{3,6})\b', line)
-            if m:
-                item_code = m.group(1)
-            # description: remove numeric tokens from line
-            desc = re.sub(r'[0-9\,]+\.?\d*', '', line).strip()
-            # Clean values
-            def clean_num(s):
-                try:
-                    return Decimal(s.replace(',', ''))
-                except Exception:
+        if len(numbers) >= 1 and len(line) > 5:
+            # Extract description by removing numbers
+            desc = re.sub(r'\s*[0-9\,]+\.?\d*\s*', ' ', line).strip()
+            desc = ' '.join(desc.split())
+
+            if desc and len(desc) > 2 and not re.match(r'^\d+$', desc):
+                # Last number is usually the amount/value
+                value = numbers[-1] if numbers else None
+                qty = None
+                rate = None
+                item_code = None
+
+                # If we have multiple numbers, second-to-last might be qty or rate
+                if len(numbers) >= 2:
+                    # Check if it looks like a small quantity
+                    try:
+                        qty_val = float(numbers[-2].replace(',', ''))
+                        if 0 < qty_val < 1000 and int(qty_val) == qty_val:
+                            qty = numbers[-2]
+                        else:
+                            rate = numbers[-2]  # Otherwise it's probably the unit price
+                    except Exception:
+                        pass
+
+                # Try to extract item code (first sequence of numbers)
+                m = re.search(r'\b(\d{3,6})\b', line)
+                if m:
+                    item_code = m.group(1)
+
+                def clean_num(s):
+                    try:
+                        if s:
+                            cleaned = re.sub(r'[^\d\.\,\-]', '', str(s)).strip()
+                            return Decimal(cleaned.replace(',', ''))
+                    except Exception:
+                        return None
                     return None
-            items.append({
-                'item_code': item_code,
-                'description': desc[:255],
-                'qty': Decimal(qty.replace(',', '')) if qty and re.match(r'^[0-9\,]+\.?\d*$', qty) else None,
-                'rate': clean_num(rate) if rate else None,
-                'value': clean_num(value) if value else None,
-            })
+
+                items.append({
+                    'item_code': item_code,
+                    'description': desc[:255],
+                    'qty': int(float(qty.replace(',', ''))) if qty else 1,
+                    'rate': clean_num(rate),
+                    'value': clean_num(value),
+                })
+
     return items
 
 
