@@ -197,6 +197,8 @@ def parse_invoice_data(text: str) -> dict:
         'invoice_no': invoice_no,
         'date': date_str,
         'customer_name': customer_name,
+        'phone': phone,
+        'email': email,
         'address': address,
         'subtotal': to_decimal(subtotal),
         'tax': to_decimal(tax),
