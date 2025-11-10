@@ -693,14 +693,14 @@ def parse_invoice_data(text: str) -> dict:
 
     # Extract line items with improved detection for various formats
     # The algorithm handles both:
-    # 1. Well-formatted PDFs: table with columns
+    # 1. Well-formatted PDFs: table with columns (Sr No, Code, Description, Type, Qty, Rate, Value)
     # 2. Scrambled PDFs: descriptions, codes, and amounts scattered
     #
     # Strategy:
-    # - Find item section header
-    # - Group consecutive description lines
-    # - Match codes with descriptions
-    # - Extract quantities and amounts
+    # - Find item section header (line with multiple item keywords)
+    # - Parse table rows looking for Sr No, item code, description, qty, rate, value
+    # - Group consecutive description lines with their numeric data
+    # - Avoid duplicates by tracking parsed items
     items = []
     item_section_started = False
     item_header_idx = -1
