@@ -334,16 +334,24 @@ def parse_invoice_data(text: str) -> dict:
     # Extract customer name - improved pattern matching for Superdoll format
     customer_name = None
 
-    # Strategy 1: Look for "Customer Name :" with proper word boundary and capture the full name up to next section
-    # Must look for the exact format where "Customer Name" is followed by actual company name
-    m = re.search(r'Customer\s*Name\s*:?\s*([^\n:]+?)(?=\n(?:Address|P\.O|Tel|Fax|Email|Attended|Kind|Reference|PI|Code|Cust|Del)\s*[:=]|\n(?:P\.O\.BOX|TANZANIA|DAR))', normalized_text, re.I | re.MULTILINE)
+    # Strategy 1: Look for "Customer Name" followed by the actual customer name
+    # Pattern: Customer Name : <value> or Customer Name<value>
+    # Capture until we hit a line with just a label or until next section
+    m = re.search(r'Customer\s+Name\s*[:=]?\s*([^\n]+?)(?=\n|$)', normalized_text, re.I | re.MULTILINE)
     if m:
         customer_name = m.group(1).strip()
-        # Clean up: remove any trailing "Reference" or field labels
-        customer_name = re.sub(r'\s+(?:Reference|Ref\.?|Address|Tel|Phone|Fax|Email|Attended|Kind|Code|PI|Date|Cust|Del\.|Type)\b.*$', '', customer_name, flags=re.I).strip()
+
+        # Clean up: remove any trailing field labels that might have been included
+        # This handles cases like "SAID SALIM BAKHRESA CO LTD Customer Name"
+        customer_name = re.sub(r'\s+(?:Customer|Name|Reference|Ref\.?|Address|Tel|Phone|Fax|Email|Attended|Kind|Code|PI|Date|Cust|Del\.|Type)\s*(?:Name|No|Number)?.*$', '', customer_name, flags=re.I).strip()
+
         # Validate: customer name should not be just numbers or "Reference"
-        if customer_name and customer_name.upper() != 'REFERENCE' and not re.match(r'^\d+', customer_name):
-            pass
+        if customer_name and customer_name.upper() != 'REFERENCE' and not re.match(r'^\d+', customer_name) and len(customer_name) > 3:
+            # Double-check it's not just field labels
+            if not re.match(r'^(?:Address|Tel|Fax|Email|Phone)\b', customer_name, re.I):
+                pass
+            else:
+                customer_name = None
         else:
             customer_name = None
 
