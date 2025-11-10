@@ -931,7 +931,14 @@ def parse_invoice_data(text: str) -> dict:
         'delivery_terms': delivery_terms,
         'remarks': remarks,
         'attended_by': attended_by,
-        'kind_attention': kind_attention
+        'kind_attention': kind_attention,
+        # Seller (supplier) information extracted from top of document when available
+        'seller_name': seller_name,
+        'seller_address': seller_address,
+        'seller_phone': seller_phone,
+        'seller_email': seller_email,
+        'seller_tax_id': seller_tax_id,
+        'seller_vat_reg': seller_vat_reg
     }
 
 
