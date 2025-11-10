@@ -838,6 +838,7 @@
                 // Invoice Information
                 document.getElementById('previewInvoiceNo').textContent = header.invoice_no || '-';
                 document.getElementById('previewInvoiceDate').textContent = header.date || '-';
+                document.getElementById('previewCodeNo').textContent = header.code_no || header.reference || '-';
 
                 // Line Items
                 const itemsContainer = document.getElementById('previewLineItems');
@@ -861,6 +862,17 @@
                 document.getElementById('previewSubtotal').textContent = (header.subtotal || 0).toLocaleString();
                 document.getElementById('previewTax').textContent = (header.tax || 0).toLocaleString();
                 document.getElementById('previewTotal').textContent = (header.total || 0).toLocaleString();
+
+                // Transaction Details
+                document.getElementById('previewPaymentMethod').textContent = header.payment_method || '-';
+                document.getElementById('previewDeliveryTerms').textContent = header.delivery_terms || '-';
+
+                // Attendee Information
+                document.getElementById('previewAttendedBy').textContent = header.attended_by || '-';
+                document.getElementById('previewKindAttention').textContent = header.kind_attention || '-';
+
+                // Remarks
+                document.getElementById('previewRemarks').textContent = header.remarks || '-';
 
                 uploadedInvoicePreview.style.display = 'block';
               }
