@@ -632,12 +632,21 @@
                 if (cancelBtn){ cancelBtn.addEventListener('click', function(){ if (fileInput) fileInput.value=''; document.getElementById('mode-manual').checked=true; document.getElementById('mode-upload').checked=false; document.getElementById('uploadSection').classList.add('d-none'); }); }
 
                 if (uploadBtn){
-                  uploadBtn.addEventListener('click', function(){
+                  uploadBtn.addEventListener('click', async function(){
                     if (!fileInput || !fileInput.files || !fileInput.files[0]){
-                      errorBox.style.display='block'; errorBox.textContent='Please select a file to upload.'; return;
+                      errorBox.style.display='block';
+                      errorBox.innerHTML='<i class="fa fa-warning me-2"></i>Please select a file to upload.';
+                      return;
                     }
-                    errorBox.style.display='none';
+
                     const file = fileInput.files[0];
+                    if (file.size > 50 * 1024 * 1024) {
+                      errorBox.style.display='block';
+                      errorBox.innerHTML='<i class="fa fa-warning me-2"></i>File is too large. Maximum size is 50MB.';
+                      return;
+                    }
+
+                    errorBox.style.display='none';
                     const fd = new FormData();
                     fd.append('file', file);
                     // include optional plate or selected order id
@@ -648,17 +657,31 @@
                     if (selOrder && selOrder.value) fd.append('selected_order_id', selOrder.value);
 
                     setProgress(5);
-                    fetch('{% url "tracker:api_upload_extract_invoice" %}', {
-                      method: 'POST',
-                      body: fd,
-                      headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCSRF() }
-                    }).then(r=>r.json()).then(data=>{
+                    uploadBtn.disabled = true;
+                    const originalBtnText = uploadBtn.innerHTML;
+                    uploadBtn.innerHTML = '<i class="fa fa-spinner fa-spin me-2"></i>Extracting...';
+
+                    try {
+                      const r = await fetch('{% url "tracker:api_upload_extract_invoice" %}', {
+                        method: 'POST',
+                        body: fd,
+                        headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCSRF() }
+                      });
+
                       setProgress(100);
+                      const data = await r.json();
+
                       if (data && data.success){
+                        errorBox.style.display='block';
+                        errorBox.innerHTML='<i class="fa fa-check-circle text-success me-2"></i>Invoice created successfully! Redirecting...';
+                        errorBox.className = 'alert alert-success mt-2';
                         // Redirect to invoice detail
-                        window.location.href = data.redirect_url || ('/invoices/' + data.invoice_id + '/');
+                        setTimeout(function(){
+                          window.location.href = data.redirect_url || ('/tracker/invoices/' + data.invoice_id + '/');
+                        }, 500);
                         return;
                       }
+
                       // If extraction requires manual review, data.data contains parsed fields
                       if (data && data.data){
                         const d = data.data;
