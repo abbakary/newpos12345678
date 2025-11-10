@@ -499,6 +499,22 @@ def parse_invoice_data(text: str) -> dict:
                         phone = phone_candidate
                         break
 
+    # Fallback: sometimes customer phone is a standalone number-like line (e.g., 2180007/2861940)
+    if not phone:
+        try:
+            candidate_lines = []
+            for ln in lines:
+                if re.search(r'\d{3,}\s*[/\-]\s*\d{3,}', ln):
+                    # Exclude typical non-phone rows
+                    if re.search(r'PI\b|Invoice|Gross|Net|VAT|TSH|Qty|Rate|Value|Code|Sr\b|No\.', ln, re.I):
+                        continue
+                    candidate_lines.append(ln.strip())
+            if candidate_lines:
+                # Choose the first plausible line
+                phone = candidate_lines[0]
+        except Exception:
+            pass
+
     # Extract email - look for email pattern in the text
     email = None
     email_match = re.search(r'([\w\.-]+@[\w\.-]+\.\w+)', normalized_text)
