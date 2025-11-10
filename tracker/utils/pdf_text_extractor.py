@@ -786,13 +786,20 @@ def parse_invoice_data(text: str) -> dict:
                     unit_match = re.search(r'\b(NOS|PCS|KG|HR|LTR|PIECES?|UNITS?|BOX|CASE|SETS?|PC|KIT)\b', line_stripped, re.I)
                     unit_value = unit_match.group(1).upper() if unit_match else None
 
-                    # Build description by joining text parts and removing unit
-                    full_text = ' '.join(text_parts)
+                    # Build description by joining text parts
+                    # Keep all text parts as they likely represent the full description
+                    full_text = ' '.join(text_parts).strip()
+
+                    # Remove unit if found (it was extracted separately)
                     if unit_value:
                         full_text = re.sub(r'\b' + re.escape(unit_value) + r'\b', '', full_text, flags=re.I).strip()
 
-                    # Skip if description is too short
-                    if len(full_text) < 2:
+                    # Clean up excessive spaces
+                    full_text = ' '.join(full_text.split())
+
+                    # Skip only if description is too short (less than 1 character)
+                    # Allow single descriptive words like "ITEM" as valid descriptions
+                    if not full_text or (len(full_text) < 1 and full_text.upper() not in ['ITEM', 'SERVICE', 'PRODUCT']):
                         continue
 
                     # Initialize item
